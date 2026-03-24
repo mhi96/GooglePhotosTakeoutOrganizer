@@ -13,9 +13,9 @@ Organize your photos and videos into a structured folder hierarchy automatically
 
 
 ## Usage
-1 Place your photos/videos in a source folder.
-2 Update the source_folder and destination_folder paths in organizer.py.
-3 Run the script:
+- Place your photos/videos in a source folder.
+- Update the source_folder and destination_folder paths in organizer.py.
+- Run the script:
   ```
   python organizer.py
   ```
