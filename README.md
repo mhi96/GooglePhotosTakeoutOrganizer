@@ -19,8 +19,8 @@ Organize your photos and videos into a structured folder hierarchy automatically
   ```
   python organizer.py
   ```
-4 Check the destination folder for your organized media.
-5 Check file_moves.xlsx in the destination folder for a detailed log.
+- Check the destination folder for your organized media.
+- Check file_moves.xlsx in the destination folder for a detailed log.
 
 ## Features
 - Organizes files into folders by **Year → Month → Media Type (Pictures/Videos)**.
