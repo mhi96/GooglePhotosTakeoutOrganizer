@@ -12,7 +12,6 @@ from openpyxl import Workbook, load_workbook
 # -------------------------
 # Configuration
 # -------------------------
-
 source_folder = r"/path/to/source_folder"
 destination_folder = r"/path/to/destination_folder"
 
@@ -40,21 +39,32 @@ if not os.path.exists(log_file_path):
     wb.save(log_file_path)
 
 # -------------------------
+# Build JSON metadata index
+# -------------------------
+print("Indexing all JSON files...")
+json_index = {}  # base filename without extension -> full JSON path
+for root, dirs, files in os.walk(source_folder):
+    for f in files:
+        if f.lower().endswith(".json"):
+            key = os.path.splitext(f)[0]  # base filename
+            json_index[key] = os.path.join(root, f)
+print(f"Found {len(json_index)} JSON metadata files.")
+
+# -------------------------
 # JSON fallback
 # -------------------------
 def get_json_timestamp(path):
-    folder, filename = os.path.split(path)
-    for f in os.listdir(folder):
-        if f.startswith(filename) and f.lower().endswith(".json"):
-            json_path = os.path.join(folder, f)
-            try:
-                with open(json_path, "r", encoding="utf-8") as jf:
-                    data = json.load(jf)
-                    ts = int(data.get("photoTakenTime", {}).get("timestamp", 0))
-                    if ts:
-                        return datetime.fromtimestamp(ts), "JSON"
-            except:
-                continue
+    filename = os.path.splitext(os.path.basename(path))[0]
+    json_path = json_index.get(filename)
+    if json_path:
+        try:
+            with open(json_path, "r", encoding="utf-8") as jf:
+                data = json.load(jf)
+                ts = int(data.get("photoTakenTime", {}).get("timestamp", 0))
+                if ts:
+                    return datetime.fromtimestamp(ts), "JSON"
+        except:
+            pass
     return None, None
 
 # -------------------------
@@ -135,7 +145,6 @@ def process_file(file_path):
         os.makedirs(target_folder, exist_ok=True)
 
         destination_path = os.path.join(target_folder, file)
-
         counter = 1
         base_name, extension = os.path.splitext(file)
         while os.path.exists(destination_path):
@@ -145,7 +154,7 @@ def process_file(file_path):
         shutil.move(file_path, destination_path)
 
         # -------------------------
-        # Log to Excel with new columns
+        # Log to Excel
         # -------------------------
         with log_lock:
             wb = load_workbook(log_file_path)
