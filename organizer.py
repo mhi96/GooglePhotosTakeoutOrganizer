@@ -22,11 +22,11 @@ video_ext = {".mp4", ".mov", ".3gp", ".mkv", ".ts"}
 os.makedirs(destination_folder, exist_ok=True)
 
 counter_lock = Lock()
+log_lock = Lock()
 processed = 0
 failed_files = []
 
 log_file_path = os.path.join(destination_folder, "file_moves.xlsx")
-log_lock = Lock()
 
 # -------------------------
 # Initialize Excel log
@@ -42,29 +42,30 @@ if not os.path.exists(log_file_path):
 # Build JSON metadata index
 # -------------------------
 print("Indexing all JSON files...")
-json_index = {}  # base filename without extension -> full JSON path
+json_index = {}  # key: lowercase base filename -> list of JSON paths
 for root, dirs, files in os.walk(source_folder):
     for f in files:
         if f.lower().endswith(".json"):
-            key = os.path.splitext(f)[0]  # base filename
-            json_index[key] = os.path.join(root, f)
+            key = os.path.splitext(f)[0].lower()
+            json_index.setdefault(key, []).append(os.path.join(root, f))
 print(f"Found {len(json_index)} JSON metadata files.")
 
 # -------------------------
 # JSON fallback
 # -------------------------
 def get_json_timestamp(path):
-    filename = os.path.splitext(os.path.basename(path))[0]
-    json_path = json_index.get(filename)
-    if json_path:
-        try:
-            with open(json_path, "r", encoding="utf-8") as jf:
-                data = json.load(jf)
-                ts = int(data.get("photoTakenTime", {}).get("timestamp", 0))
-                if ts:
-                    return datetime.fromtimestamp(ts), "JSON"
-        except:
-            pass
+    base_name = os.path.splitext(os.path.basename(path))[0].lower()
+    for key, paths in json_index.items():
+        if base_name.startswith(key):
+            for json_path in paths:
+                try:
+                    with open(json_path, "r", encoding="utf-8") as jf:
+                        data = json.load(jf)
+                        ts = int(data.get("photoTakenTime", {}).get("timestamp", 0))
+                        if ts:
+                            return datetime.fromtimestamp(ts), "JSON"
+                except:
+                    continue
     return None, None
 
 # -------------------------
@@ -163,8 +164,8 @@ def process_file(file_path):
                 file_path,
                 destination_path,
                 method_used,
-                os.path.splitext(os.path.basename(destination_path))[0],  # File Name Without Ext
-                os.path.splitext(os.path.basename(destination_path))[1]   # Only Extension
+                os.path.splitext(os.path.basename(destination_path))[0],
+                os.path.splitext(os.path.basename(destination_path))[1]
             ])
             wb.save(log_file_path)
 
