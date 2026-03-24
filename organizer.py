@@ -39,25 +39,18 @@ if not os.path.exists(log_file_path):
     wb.save(log_file_path)
 
 # -------------------------
-# Build JSON metadata index
-# -------------------------
-print("Indexing all JSON files...")
-json_index = {}  # key: lowercase base filename -> list of JSON paths
-for root, dirs, files in os.walk(source_folder):
-    for f in files:
-        if f.lower().endswith(".json"):
-            key = os.path.splitext(f)[0].lower()
-            json_index.setdefault(key, []).append(os.path.join(root, f))
-print(f"Found {len(json_index)} JSON metadata files.")
-
-# -------------------------
-# JSON fallback
+# JSON timestamp extraction (fixed for Google Takeout supplemental-meta JSON)
 # -------------------------
 def get_json_timestamp(path):
-    base_name = os.path.splitext(os.path.basename(path))[0].lower()
-    for key, paths in json_index.items():
-        if base_name.startswith(key):
-            for json_path in paths:
+    """
+    Matches JSON metadata for a media file even if JSON has extra suffixes like
+    '-supplemental-meta.json'. Returns datetime and method.
+    """
+    media_file = os.path.basename(path)
+    for root, dirs, files in os.walk(source_folder):
+        for f in files:
+            if f.lower().endswith(".json") and f.startswith(media_file):
+                json_path = os.path.join(root, f)
                 try:
                     with open(json_path, "r", encoding="utf-8") as jf:
                         data = json.load(jf)
